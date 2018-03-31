@@ -76,9 +76,9 @@ struct request_parser {
    enum request_state state;
    /* para body */
    /* cuantos bytes tenemos que leer*/
-   uint8_t n;
+   uint8_t need;
    /* cuantos bytes ya leimos */
-   uint8_t i;
+   uint8_t read;
 };
 
 /* Funciones */
