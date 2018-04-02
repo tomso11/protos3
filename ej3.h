@@ -18,6 +18,8 @@
 *
 */
 
+#define HEADER_DEF_LEN 19
+
 /* Metodos posibles */
 enum req_method {
 	GET,
@@ -44,8 +46,11 @@ struct request {
 
 	/* header line*/
 	/* para esto estaria bueno tener algo como un Map<String,String> */
-	char ** headers;
-	char ** values;
+	//char ** headers;
+	//char ** values;
+	char header[20];
+	char * host;
+	int cont-len;
 
 	/* body */
 	char * body;

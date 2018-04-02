@@ -19,9 +19,119 @@ remaining_is_done(struct request_parser* p) {
 
 //////////////////////////////////////////////////////
 
+/* Pensaba hacer una misma funcion minimamente para todo lo que es start line,
+	ya que la forma de procesarlo es basicamente una maquina de estado y 
+	guardar los caracteres en un array. El problema es que tengo que poder
+	diferenciar los estados para saber en que array guardarlo.
+	Adicionalmente, me gustaria realizar un chequeo de validez de por ejemplo
+	el metodo que se recibe.
+*/
+
+/* GENERAL: Deberia contemplar el error de si mandan un enter en el medio
+ de la linea? */
+
+enum request_state target(struct request_parser* p, const uint8_t c){
+	enum request_state next;
+	static int pos = 0; // no se me ocurre otra forma
+
+	switch ( c ){
+		case ' ':
+			next = p->state + 1;
+			break;
+		default:
+			p->( req_tgt + pos ) = c;
+			pos++;
+			next = request_tgt;
+			break;
+	}
+
+	return next;
+}
+
+/* Aca podemos utilizar un array fijo para guardar los nombres de los headers ? 
+	Observacion: La verdad es que solo nos interesan los headers Host y 
+	Content-Length.
+	Cualquier otro header no nos cambia nada, por lo tanto podemos hacer 
+	que el parser solo le preste atencion a dichos headers.
+*/
+
+enum request_state header(struct request_parser* p, const uint8_t c){
+	enum request_state next;
+	static int pos = 0; // no se me ocurre otra forma
+
+	switch ( c ){
+		case ':':
+			p->( header + pos ) = '\0';
+			/*TODO:chequear si es igual a Host o Content-Length para guardar
+			 el valor*/
+			next = request_value;
+			break;
+		default:
+			if ( pos < HEADER_DEF_LEN ){
+				p->( header + pos ) = c;
+				pos++;
+			}
+			next = request_header;
+			break;
+	}
+
+	return next;
+}
+
+enum request_state value(struct request_parser* p, const uint8_t c, const int type){
+	enum request_state next;
+	static int pos = 0; // no se me ocurre otra forma
+
+	switch ( c ){
+		case '\n':
+			if( type == 1 )
+				p->( host + pos ) = '\0';
+			/*TODO:chequear si es igual a Host o Content-Length para guardar
+			 el valor*/
+			next = request_header;
+			break;
+		default:
+			//Content-Length
+			if( type == 0 )
+				p->cont-len = (p->cont-len)*10 + c;
+			else{
+				//host
+				p->( host + pos )= c;
+				pos++;
+			}
+			next = request_value;
+			break;
+	}
+
+	return next;
+}
+
+/* No recuerdo como terminaba el body msg */
+
+enum request_state body(struct request_parser* p, const uint8_t c){
+	enum request_state next;
+	static int pos = 0; // no se me ocurre otra forma
+
+	switch ( c ){
+		case '\n':
+			p->( body + pos ) = '\0';
+			next = request_done;
+			break;
+		default:
+			p->( body + pos ) = c;
+			pos++;
+			next = request_body;
+			break;
+	}
+
+	return next;
+}
+
+
 
 enum request_state request_parser_feed (struct request_parser* p, const uint8_t c) {
     enum request_state next;
+    int pos;
 
     switch( p->state ){
     	case request_method:
